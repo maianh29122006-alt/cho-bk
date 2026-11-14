@@ -3,280 +3,1315 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chợ BK - Sàn giao dịch sinh viên</title>
-    <!-- Thư viện giao diện và logic -->
+    <title>Chợ BK - Sàn Giao Dịch Đồ Cũ Sinh Viên</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        /* Tùy chỉnh thanh cuộn */
-        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #cf2c28; border-radius: 4px; }
     </style>
 </head>
-<body class="bg-gray-50 font-sans text-gray-900">
+<body class="bg-gray-100 font-sans text-gray-900 antialiased">
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
-        const { Search, Plus, Trash2, MessageSquare, User, Tag, ShieldAlert } = lucide;
+        const { useState, useEffect, useMemo } = React;
+
+        // --- BỘ ICON SVG TÍCH HỢP SẴN ---
+        const Icon = ({ name, className = "w-4 h-4" }) => {
+            const icons = {
+                search: <><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>,
+                plus: <><path d="M5 12h14"/><path d="M12 5v14"/></>,
+                trash: <><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></>,
+                edit: <><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></>,
+                message: <><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></>,
+                heart: <><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></>,
+                flag: <><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></>,
+                shield: <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></>,
+                user: <><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>,
+                logout: <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></>,
+                x: <><path d="M18 6 6 18"/><path d="m6 6 12 12"/></>,
+                send: <><line x1="22" x2="11" y1="2" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></>,
+                store: <><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/></>,
+                alert: <><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></>,
+                sparkles: <><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></>
+            };
+            return (
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                    {icons[name] || null}
+                </svg>
+            );
+        };
+
+        // --- DỮ LIỆU MẪU TRUNG TÍNH (KHÔNG CHỨA THÔNG TIN CÁ NHÂN) ---
+        const INITIAL_USERS = [
+            { email: 'admin@demo.edu.vn', password: '123', name: 'Quản trị viên (Admin)', role: 'VT02', banned: false },
+            { email: 'sinhvien.a@demo.edu.vn', password: '123', name: 'Sinh viên A (Người bán)', role: 'VT01', banned: false },
+            { email: 'sinhvien.b@demo.edu.vn', password: '123', name: 'Sinh viên B (Người mua)', role: 'VT01', banned: false }
+        ];
+
+        const INITIAL_CATEGORIES = [
+            'Giáo trình & Tài liệu',
+            'Linh kiện điện tử',
+            'Thiết bị công nghệ',
+            'Đồ dùng học tập',
+            'Đồ dùng ký túc xá'
+        ];
+
+        const INITIAL_PRODUCTS = [
+            {
+                id: 101,
+                title: 'Combo Giáo trình Giải tích 1, 2 & Vật lý đại cương',
+                price: 65000,
+                category: 'Giáo trình & Tài liệu',
+                condition: 'Mới 90%, có note công thức',
+                description: 'Sách giữ gìn cẩn thận, không rách trang, có ghi chú các dạng bài tập trọng tâm thi giữa kỳ và cuối kỳ. Giao dịch trực tiếp tại khuôn viên trường.',
+                sellerEmail: 'sinhvien.a@demo.edu.vn',
+                sellerName: 'Sinh viên A (Người bán)',
+                status: 'Đang bán',
+                createdAt: '14/11/2026',
+                image: 'https://placehold.co/600x400/cf2c28/ffffff?text=Giao+Trinh+Dai+Cuong'
+            },
+            {
+                id: 102,
+                title: 'Kit thực hành Vi điều khiển STM32 + Mạch nạp ST-Link',
+                price: 110000,
+                category: 'Linh kiện điện tử',
+                condition: 'Đã qua sử dụng, chạy tốt',
+                description: 'Vừa hoàn thành môn thực hành nên nhượng lại cho bạn nào cần làm đồ án. Tặng kèm dây cắm testboard.',
+                sellerEmail: 'sinhvien.a@demo.edu.vn',
+                sellerName: 'Sinh viên A (Người bán)',
+                status: 'Đang bán',
+                createdAt: '14/11/2026',
+                image: 'https://placehold.co/600x400/991b1b/ffffff?text=Kit+STM32+%2B+ST-Link'
+            },
+            {
+                id: 103,
+                title: 'Máy tính cầm tay Casio fx-580VN X chính hãng',
+                price: 380000,
+                category: 'Đồ dùng học tập',
+                condition: 'Mới 95%, còn tem',
+                description: 'Máy dùng ít, màn hình sắc nét, phím bấm nhạy. Phù hợp cho các môn Toán cao cấp và Xác suất thống kê.',
+                sellerEmail: 'sinhvien.b@demo.edu.vn',
+                sellerName: 'Sinh viên B (Người mua)',
+                status: 'Đang bán',
+                createdAt: '13/11/2026',
+                image: 'https://placehold.co/600x400/b91c1c/ffffff?text=Casio+fx-580VN+X'
+            },
+            {
+                id: 104,
+                title: 'Chuột không dây Logitech M331 Silent',
+                price: 150000,
+                category: 'Thiết bị công nghệ',
+                condition: 'Hoạt động hoàn hảo',
+                description: 'Bấm siêu êm không tiếng động, rất hợp mang lên thư viện học bài hoặc làm việc nhóm.',
+                sellerEmail: 'sinhvien.b@demo.edu.vn',
+                sellerName: 'Sinh viên B (Người mua)',
+                status: 'Đã bán',
+                createdAt: '12/11/2026',
+                image: 'https://placehold.co/600x400/4b5563/ffffff?text=Logitech+M331'
+            }
+        ];
+
+        const INITIAL_REPORTS = [
+            {
+                id: 1,
+                productId: 103,
+                productTitle: 'Máy tính cầm tay Casio fx-580VN X chính hãng',
+                reporterEmail: 'sinhvien.a@demo.edu.vn',
+                reason: 'Nghi ngờ giá cao hơn giá thị trường đồ cũ',
+                createdAt: '14/11/2026 10:30'
+            }
+        ];
+
+        const INITIAL_MESSAGES = [
+            {
+                id: 1,
+                productId: 101,
+                productTitle: 'Combo Giáo trình Giải tích 1, 2 & Vật lý đại cương',
+                senderEmail: 'sinhvien.b@demo.edu.vn',
+                senderName: 'Sinh viên B (Người mua)',
+                receiverEmail: 'sinhvien.a@demo.edu.vn',
+                text: 'Chào bạn, bộ giáo trình này còn không ạ? Chiều nay mình qua cổng trường lấy được không?',
+                time: '14:20'
+            }
+        ];
+
+        // Hàm nén ảnh khi tải lên từ máy tính
+        const compressImage = (file) => {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 600;
+                        const scale = Math.min(1, MAX_WIDTH / img.width);
+                        canvas.width = img.width * scale;
+                        canvas.height = img.height * scale;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        resolve(canvas.toDataURL('image/jpeg', 0.75));
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        };
 
         const App = () => {
-            // 1. STATE QUẢN LÝ NGƯỜI DÙNG (Giả lập phân quyền)
-            const [currentUser, setCurrentUser] = useState({ 
-                email: 'sinhvien@hust.edu.vn', 
-                role: 'VT01', 
-                name: 'Sinh viên' 
+            const loadState = (key, fallback) => {
+                try {
+                    const saved = localStorage.getItem(key);
+                    return saved ? JSON.parse(saved) : fallback;
+                } catch {
+                    return fallback;
+                }
+            };
+
+            const [users, setUsers] = useState(() => loadState('chobk_users_v2', INITIAL_USERS));
+            const [categories, setCategories] = useState(() => loadState('chobk_categories_v2', INITIAL_CATEGORIES));
+            const [products, setProducts] = useState(() => loadState('chobk_products_v2', INITIAL_PRODUCTS));
+            const [savedIds, setSavedIds] = useState(() => loadState('chobk_saved_v2', { 'sinhvien.b@demo.edu.vn': [101] }));
+            const [reports, setReports] = useState(() => loadState('chobk_reports_v2', INITIAL_REPORTS));
+            const [messages, setMessages] = useState(() => loadState('chobk_messages_v2', INITIAL_MESSAGES));
+            
+            // Mặc định đăng nhập sẵn bằng tài khoản mẫu Sinh viên A để trải nghiệm ngay không cần đăng ký
+            const [currentUser, setCurrentUser] = useState(() => {
+                const savedUser = loadState('chobk_current_user_v2', 'INIT_DEFAULT');
+                return savedUser === 'INIT_DEFAULT' ? INITIAL_USERS[1] : savedUser;
             });
 
-            // 2. STATE DỮ LIỆU SẢN PHẨM (Có chứa các thông tin chuyên ngành Điện tử - Viễn thông)
-            const [products, setProducts] = useState([
-                { id: 1, title: 'Giáo trình Giải tích 1 & Vật lý điện tử', price: 60000, category: 'Giáo trình đại cương', sellerEmail: 'nguyenvanb@hust.edu.vn', sellerName: 'Nguyễn Văn B', image: 'https://placehold.co/400x300/cf2c28/ffffff?text=Giao+Trinh' },
-                { id: 2, title: 'Bộ kit thực hành mạch (1 điện trở cố định, 1 biến trở)', price: 45000, category: 'Linh kiện điện tử', sellerEmail: 'sinhvien@hust.edu.vn', sellerName: 'Sinh viên (Bạn)', image: 'https://placehold.co/400x300/cf2c28/ffffff?text=Mach+Dien' },
-                { id: 3, title: 'Board mạch Arduino Uno R3 cũ', price: 90000, category: 'Linh kiện điện tử', sellerEmail: 'tranthic@hust.edu.vn', sellerName: 'Trần Thị C', image: 'https://placehold.co/400x300/cf2c28/ffffff?text=Arduino' },
-                { id: 4, title: 'Cáp quang bấm sẵn đầu chuẩn SC/UPC', price: 30000, category: 'Thiết bị viễn thông', sellerEmail: 'admin@hust.edu.vn', sellerName: 'Admin Chợ BK', image: 'https://placehold.co/400x300/cf2c28/ffffff?text=Cap+Quang' }
-            ]);
+            useEffect(() => { localStorage.setItem('chobk_users_v2', JSON.stringify(users)); }, [users]);
+            useEffect(() => { localStorage.setItem('chobk_categories_v2', JSON.stringify(categories)); }, [categories]);
+            useEffect(() => { localStorage.setItem('chobk_products_v2', JSON.stringify(products)); }, [products]);
+            useEffect(() => { localStorage.setItem('chobk_saved_v2', JSON.stringify(savedIds)); }, [savedIds]);
+            useEffect(() => { localStorage.setItem('chobk_reports_v2', JSON.stringify(reports)); }, [reports]);
+            useEffect(() => { localStorage.setItem('chobk_messages_v2', JSON.stringify(messages)); }, [messages]);
+            useEffect(() => { localStorage.setItem('chobk_current_user_v2', JSON.stringify(currentUser)); }, [currentUser]);
 
-            // 3. STATE LỌC & TÌM KIẾM
-            const [activeCategory, setActiveCategory] = useState('Tất cả');
+            // State giao diện
+            const [authMode, setAuthMode] = useState('login');
+            const [authForm, setAuthForm] = useState({ email: '', password: '', name: '' });
+            const [authError, setAuthError] = useState('');
+
+            const [activeTab, setActiveTab] = useState('market');
+            const [adminSubTab, setAdminSubTab] = useState('reports');
+            const [selectedCategory, setSelectedCategory] = useState('Tất cả');
+            const [statusFilter, setStatusFilter] = useState('Tất cả');
             const [searchQuery, setSearchQuery] = useState('');
-            const categories = ['Tất cả', 'Giáo trình đại cương', 'Linh kiện điện tử', 'Thiết bị viễn thông', 'Đồ dùng cá nhân'];
 
-            // 4. STATE FORM ĐĂNG TIN
-            const [isModalOpen, setIsModalOpen] = useState(false);
-            const [formData, setFormData] = useState({ title: '', price: '', category: 'Giáo trình đại cương' });
+            // Modals
+            const [productModal, setProductModal] = useState({ open: false, mode: 'create', data: null });
+            const [detailModal, setDetailModal] = useState(null);
+            const [chatModal, setChatModal] = useState(null);
+            const [chatInput, setChatInput] = useState('');
+            const [reportModal, setReportModal] = useState(null);
+            const [reportReason, setReportReason] = useState('Sản phẩm cấm / Vi phạm quy định');
+            const [newCategoryName, setNewCategoryName] = useState('');
 
-            // LOGIC HỆ THỐNG
-            // Chuyển đổi vai trò để test
-            const toggleUser = (roleType) => {
-                if (roleType === 'admin') {
-                    setCurrentUser({ email: 'admin@hust.edu.vn', role: 'VT02', name: 'Quản trị viên' });
-                } else {
-                    setCurrentUser({ email: 'sinhvien@hust.edu.vn', role: 'VT01', name: 'Sinh viên (Bạn)' });
-                }
-            };
-
-            // Hàm xóa bài viết (Kiểm tra quyền)
-            const handleDelete = (id, sellerEmail) => {
-                if (currentUser.role === 'VT02' || currentUser.email === sellerEmail) {
-                    if (confirm('Bạn có chắc chắn muốn xóa bài đăng này? Hành động này không thể hoàn tác.')) {
-                        setProducts(products.filter(p => p.id !== id));
-                    }
-                } else {
-                    alert('Lỗi bảo mật: Bạn không có quyền xóa bài đăng của người khác!');
-                }
-            };
-
-            // Hàm xử lý đăng tin mới
-            const handleSubmit = (e) => {
-                e.preventDefault();
-                if (!formData.title || !formData.price) return;
-                
-                const newProduct = {
-                    id: Date.now(),
-                    title: formData.title,
-                    price: parseInt(formData.price),
-                    category: formData.category,
-                    sellerEmail: currentUser.email,
-                    sellerName: currentUser.name,
-                    image: `https://placehold.co/400x300/cf2c28/ffffff?text=Cho+BK`
+            // --- TẠO MAIL GIẢ LẬP NGẪU NHIÊN 1 CHẠM ---
+            const generateSimulatedAccount = () => {
+                const randomCode = Math.floor(1000 + Math.random() * 9000);
+                const simEmail = `sv.demo${randomCode}@demo.edu.vn`;
+                const simUser = {
+                    email: simEmail,
+                    password: '123',
+                    name: `Sinh viên Trải nghiệm #${randomCode}`,
+                    role: 'VT01',
+                    banned: false
                 };
-                setProducts([newProduct, ...products]);
-                setIsModalOpen(false);
-                setFormData({ title: '', price: '', category: 'Giáo trình đại cương' });
+                setUsers(prev => [...prev, simUser]);
+                setCurrentUser(simUser);
+                setActiveTab('market');
+                alert(`Đã tạo và đăng nhập bằng mail giả lập:\n${simEmail}\n(Bạn có thể đăng tin, nhắn tin, lưu tin ngay lập tức!)`);
             };
 
-            // Hàm lọc sản phẩm để hiển thị
-            const filteredProducts = products.filter(p => {
-                const matchCategory = activeCategory === 'Tất cả' || p.category === activeCategory;
-                const matchSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase());
-                return matchCategory && matchSearch;
-            });
+            // --- XỬ LÝ ĐĂNG NHẬP / ĐĂNG KÝ ---
+            const handleAuthSubmit = (e) => {
+                e.preventDefault();
+                setAuthError('');
+                const email = authForm.email.trim().toLowerCase();
+
+                if (authMode === 'login') {
+                    const found = users.find(u => u.email === email && u.password === authForm.password);
+                    if (!found) {
+                        setAuthError('Email hoặc mật khẩu không chính xác!');
+                        return;
+                    }
+                    if (found.banned) {
+                        setAuthError('Tài khoản này đã bị Quản trị viên khóa.');
+                        return;
+                    }
+                    setCurrentUser(found);
+                    setActiveTab('market');
+                } else {
+                    if (!authForm.name.trim()) {
+                        setAuthError('Vui lòng nhập tên hiển thị.');
+                        return;
+                    }
+                    if (users.some(u => u.email === email)) {
+                        setAuthError('Email này đã tồn tại!');
+                        return;
+                    }
+                    const newUser = {
+                        email,
+                        password: authForm.password,
+                        name: authForm.name.trim(),
+                        role: 'VT01',
+                        banned: false
+                    };
+                    setUsers([...users, newUser]);
+                    setCurrentUser(newUser);
+                    setActiveTab('market');
+                }
+            };
+
+            const switchUserByEmail = (email) => {
+                const found = users.find(u => u.email === email);
+                if (!found) return;
+                if (found.banned) {
+                    alert('Tài khoản này đang bị khóa. Hãy chọn tài khoản khác hoặc mở khóa trong trang Admin.');
+                    return;
+                }
+                setCurrentUser(found);
+                if (found.role !== 'VT02' && activeTab === 'admin') {
+                    setActiveTab('market');
+                }
+            };
+
+            const handleLogout = () => {
+                setCurrentUser(null);
+                setAuthForm({ email: '', password: '', name: '' });
+                setAuthError('');
+            };
+
+            const resetDemoData = () => {
+                if (confirm('Khôi phục toàn bộ dữ liệu về trạng thái mẫu ban đầu?')) {
+                    localStorage.clear();
+                    setUsers(INITIAL_USERS);
+                    setCategories(INITIAL_CATEGORIES);
+                    setProducts(INITIAL_PRODUCTS);
+                    setSavedIds({ 'sinhvien.b@demo.edu.vn': [101] });
+                    setReports(INITIAL_REPORTS);
+                    setMessages(INITIAL_MESSAGES);
+                    setCurrentUser(INITIAL_USERS[1]);
+                    setActiveTab('market');
+                }
+            };
+
+            // --- XỬ LÝ SẢN PHẨM ---
+            const openCreateModal = () => {
+                setProductModal({
+                    open: true,
+                    mode: 'create',
+                    data: {
+                        title: '',
+                        price: '',
+                        category: categories[0] || 'Giáo trình & Tài liệu',
+                        condition: 'Mới 90%',
+                        description: '',
+                        image: ''
+                    }
+                });
+            };
+
+            const openEditModal = (product) => {
+                setProductModal({
+                    open: true,
+                    mode: 'edit',
+                    data: { ...product }
+                });
+            };
+
+            const handleImageUpload = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const compressed = await compressImage(file);
+                setProductModal(prev => ({
+                    ...prev,
+                    data: { ...prev.data, image: compressed }
+                }));
+            };
+
+            const handleSaveProduct = (e) => {
+                e.preventDefault();
+                const d = productModal.data;
+                if (!d.title.trim() || !d.price) return;
+
+                const finalImage = d.image.trim() || `https://placehold.co/600x400/cf2c28/ffffff?text=${encodeURIComponent(d.title.slice(0, 18))}`;
+
+                if (productModal.mode === 'create') {
+                    const newItem = {
+                        id: Date.now(),
+                        title: d.title.trim(),
+                        price: Number(d.price),
+                        category: d.category,
+                        condition: d.condition.trim() || 'Đã qua sử dụng',
+                        description: d.description.trim() || 'Liên hệ trực tiếp để xem hàng tại trường.',
+                        sellerEmail: currentUser.email,
+                        sellerName: currentUser.name,
+                        status: 'Đang bán',
+                        createdAt: new Date().toLocaleDateString('vi-VN'),
+                        image: finalImage
+                    };
+                    setProducts([newItem, ...products]);
+                } else {
+                    setProducts(products.map(p => p.id === d.id ? {
+                        ...p,
+                        title: d.title.trim(),
+                        price: Number(d.price),
+                        category: d.category,
+                        condition: d.condition,
+                        description: d.description,
+                        image: finalImage
+                    } : p));
+                }
+                setProductModal({ open: false, mode: 'create', data: null });
+            };
+
+            const handleDeleteProduct = (product) => {
+                const isOwner = currentUser.email === product.sellerEmail;
+                const isAdmin = currentUser.role === 'VT02';
+                if (!isOwner && !isAdmin) {
+                    alert('Bạn không có quyền xóa bài đăng này!');
+                    return;
+                }
+                if (confirm(`Xác nhận xóa bài đăng "${product.title}"?`)) {
+                    setProducts(products.filter(p => p.id !== product.id));
+                    setReports(reports.filter(r => r.productId !== product.id));
+                    if (detailModal?.id === product.id) setDetailModal(null);
+                }
+            };
+
+            const toggleSoldStatus = (product) => {
+                setProducts(products.map(p => p.id === product.id ? {
+                    ...p,
+                    status: p.status === 'Đang bán' ? 'Đã bán' : 'Đang bán'
+                } : p));
+            };
+
+            // --- XỬ LÝ LƯU TIN & KHIẾU NẠI ---
+            const userSavedList = currentUser ? (savedIds[currentUser.email] || []) : [];
+
+            const toggleSavePost = (productId) => {
+                const currentList = savedIds[currentUser.email] || [];
+                const updated = currentList.includes(productId)
+                    ? currentList.filter(id => id !== productId)
+                    : [...currentList, productId];
+                setSavedIds({ ...savedIds, [currentUser.email]: updated });
+            };
+
+            const handleSubmitReport = (e) => {
+                e.preventDefault();
+                if (!reportModal) return;
+                const newRep = {
+                    id: Date.now(),
+                    productId: reportModal.id,
+                    productTitle: reportModal.title,
+                    reporterEmail: currentUser.email,
+                    reason: reportReason,
+                    createdAt: new Date().toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })
+                };
+                setReports([newRep, ...reports]);
+                setReportModal(null);
+                alert('Đã gửi khiếu nại tới Quản trị viên!');
+            };
+
+            // --- XỬ LÝ NHẮN TIN ---
+            const openChatWithSeller = (product) => {
+                setChatModal({
+                    productId: product.id,
+                    productTitle: product.title,
+                    partnerEmail: product.sellerEmail,
+                    partnerName: product.sellerName
+                });
+                setChatInput('');
+            };
+
+            const handleSendMessage = (e) => {
+                e.preventDefault();
+                if (!chatInput.trim() || !chatModal) return;
+                const newMsg = {
+                    id: Date.now(),
+                    productId: chatModal.productId,
+                    productTitle: chatModal.productTitle,
+                    senderEmail: currentUser.email,
+                    senderName: currentUser.name,
+                    receiverEmail: chatModal.partnerEmail,
+                    text: chatInput.trim(),
+                    time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+                };
+                setMessages([...messages, newMsg]);
+                setChatInput('');
+            };
+
+            // --- LỌC DỮ LIỆU HIỂN THỊ ---
+            const filteredProducts = useMemo(() => {
+                return products.filter(p => {
+                    if (activeTab === 'saved' && !userSavedList.includes(p.id)) return false;
+                    if (activeTab === 'my-posts' && p.sellerEmail !== currentUser?.email) return false;
+                    if (selectedCategory !== 'Tất cả' && p.category !== selectedCategory) return false;
+                    if (statusFilter !== 'Tất cả' && p.status !== statusFilter) return false;
+                    if (searchQuery.trim()) {
+                        const q = searchQuery.toLowerCase();
+                        return p.title.toLowerCase().includes(q) || p.description.toLowerCase().includes(q);
+                    }
+                    return true;
+                });
+            }, [products, activeTab, userSavedList, currentUser, selectedCategory, statusFilter, searchQuery]);
+
+            const conversations = useMemo(() => {
+                if (!currentUser) return [];
+                const myMsgs = messages.filter(m => m.senderEmail === currentUser.email || m.receiverEmail === currentUser.email);
+                const map = new Map();
+                myMsgs.forEach(m => {
+                    const partnerEmail = m.senderEmail === currentUser.email ? m.receiverEmail : m.senderEmail;
+                    const key = `${m.productId}_${partnerEmail}`;
+                    const partnerObj = users.find(u => u.email === partnerEmail);
+                    map.set(key, {
+                        key,
+                        productId: m.productId,
+                        productTitle: m.productTitle,
+                        partnerEmail,
+                        partnerName: partnerObj ? partnerObj.name : partnerEmail,
+                        lastMessage: m.text,
+                        lastTime: m.time
+                    });
+                });
+                return Array.from(map.values()).reverse();
+            }, [messages, currentUser, users]);
+
+            // ==========================================
+            // MÀN HÌNH ĐĂNG NHẬP (KHI NGƯỜI DÙNG BẤM ĐĂNG XUẤT)
+            // ==========================================
+            if (!currentUser) {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-gray-100 flex flex-col justify-center items-center p-4">
+                        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 w-full max-w-md overflow-hidden">
+                            <div className="bg-[#cf2c28] p-6 text-white text-center">
+                                <div className="inline-flex items-center gap-2 mb-2">
+                                    <span className="bg-white text-[#cf2c28] px-2.5 py-1 rounded font-black text-2xl">Chợ</span>
+                                    <span className="font-black text-3xl tracking-tight">BK</span>
+                                </div>
+                                <p className="text-red-100 text-sm">Sàn trao đổi giáo trình, linh kiện & đồ cũ sinh viên</p>
+                            </div>
+
+                            <div className="p-6">
+                                {/* Nút trải nghiệm ngay không cần đăng ký */}
+                                <button
+                                    onClick={generateSimulatedAccount}
+                                    className="w-full mb-5 py-3 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl font-bold text-sm shadow-md flex items-center justify-center gap-2 transition"
+                                >
+                                    <Icon name="sparkles" className="w-5 h-5" />
+                                    Tạo mail giả lập & Vào ngay (Không cần đăng ký)
+                                </button>
+
+                                <div className="mb-5">
+                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2.5 text-center">
+                                        Hoặc chọn nhanh tài khoản mẫu có sẵn
+                                    </p>
+                                    <div className="space-y-2">
+                                        <button
+                                            onClick={() => switchUserByEmail('admin@demo.edu.vn')}
+                                            className="w-full flex items-center justify-between px-3 py-2 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg text-xs font-bold text-amber-900 transition"
+                                        >
+                                            <span className="flex items-center gap-2"><Icon name="shield" className="w-4 h-4 text-amber-600" /> Admin (admin@demo.edu.vn)</span>
+                                            <span className="text-amber-600">Vào →</span>
+                                        </button>
+                                        <button
+                                            onClick={() => switchUserByEmail('sinhvien.a@demo.edu.vn')}
+                                            className="w-full flex items-center justify-between px-3 py-2 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg text-xs font-bold text-red-900 transition"
+                                        >
+                                            <span className="flex items-center gap-2"><Icon name="store" className="w-4 h-4 text-[#cf2c28]" /> Sinh viên A (sinhvien.a@demo.edu.vn)</span>
+                                            <span className="text-[#cf2c28]">Vào →</span>
+                                        </button>
+                                        <button
+                                            onClick={() => switchUserByEmail('sinhvien.b@demo.edu.vn')}
+                                            className="w-full flex items-center justify-between px-3 py-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg text-xs font-bold text-blue-900 transition"
+                                        >
+                                            <span className="flex items-center gap-2"><Icon name="user" className="w-4 h-4 text-blue-600" /> Sinh viên B (sinhvien.b@demo.edu.vn)</span>
+                                            <span className="text-blue-600">Vào →</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="border-t pt-4">
+                                    <div className="flex border-b mb-4">
+                                        <button
+                                            onClick={() => { setAuthMode('login'); setAuthError(''); }}
+                                            className={`flex-1 pb-2 font-bold text-xs border-b-2 transition ${authMode === 'login' ? 'border-[#cf2c28] text-[#cf2c28]' : 'border-transparent text-gray-400'}`}
+                                        >
+                                            Đăng nhập thủ công
+                                        </button>
+                                        <button
+                                            onClick={() => { setAuthMode('register'); setAuthError(''); }}
+                                            className={`flex-1 pb-2 font-bold text-xs border-b-2 transition ${authMode === 'register' ? 'border-[#cf2c28] text-[#cf2c28]' : 'border-transparent text-gray-400'}`}
+                                        >
+                                            Đăng ký tài khoản mới
+                                        </button>
+                                    </div>
+
+                                    {authError && (
+                                        <div className="mb-3 p-2.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg font-medium">
+                                            {authError}
+                                        </div>
+                                    )}
+
+                                    <form onSubmit={handleAuthSubmit} className="space-y-3">
+                                        {authMode === 'register' && (
+                                            <input
+                                                type="text" required
+                                                placeholder="Tên hiển thị (Vd: Sinh viên K68)"
+                                                value={authForm.name}
+                                                onChange={(e) => setAuthForm({ ...authForm, name: e.target.value })}
+                                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#cf2c28]"
+                                            />
+                                        )}
+                                        <input
+                                            type="email" required
+                                            placeholder="Email (Vd: sinhvien@demo.edu.vn)"
+                                            value={authForm.email}
+                                            onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })}
+                                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#cf2c28]"
+                                        />
+                                        <input
+                                            type="password" required
+                                            placeholder="Mật khẩu (mẫu: 123)"
+                                            value={authForm.password}
+                                            onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
+                                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#cf2c28]"
+                                        />
+                                        <button type="submit" className="w-full bg-[#cf2c28] text-white py-2 rounded-lg font-bold text-xs hover:bg-red-800 transition">
+                                            {authMode === 'login' ? 'Đăng nhập' : 'Hoàn tất đăng ký'}
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            // ==========================================
+            // MÀN HÌNH CHÍNH CHỢ BK
+            // ==========================================
+            const isAdmin = currentUser.role === 'VT02';
 
             return (
                 <div className="min-h-screen flex flex-col">
-                    {/* HEADER */}
-                    <header className="bg-[#cf2c28] text-white sticky top-0 z-40 shadow-lg">
-                        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row justify-between items-center gap-3">
-                            <div className="flex items-center gap-2 w-full sm:w-auto">
-                                {/* Đã xóa hidden sm:block để chữ BK luôn hiển thị */}
-                                <div className="bg-white text-[#cf2c28] px-2 py-1 rounded font-black text-2xl leading-none shadow-sm">Chợ</div>
+                    {/* THANH TRẢI NGHIỆM NHANH (CHUYỂN VAI TRÒ & TẠO MAIL GIẢ LẬP KHÔNG CẦN ĐĂNG KÝ) */}
+                    <div className="bg-gray-900 text-gray-200 text-xs py-2 px-4 border-b border-gray-800">
+                        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-amber-400 font-bold">⚡ Chế độ trải nghiệm nhanh:</span>
+                                <select
+                                    value={currentUser.email}
+                                    onChange={(e) => switchUserByEmail(e.target.value)}
+                                    className="bg-gray-800 text-white border border-gray-700 rounded px-2.5 py-1 text-xs font-medium focus:outline-none focus:border-amber-400 cursor-pointer"
+                                >
+                                    {users.map(u => (
+                                        <option key={u.email} value={u.email}>
+                                            {u.role === 'VT02' ? '🛡️' : '👨‍🎓'} {u.name} ({u.email})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <button
+                                onClick={generateSimulatedAccount}
+                                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1 rounded text-xs flex items-center gap-1 transition"
+                            >
+                                <Icon name="sparkles" className="w-3.5 h-3.5" /> + Tạo mail giả lập mới (1 chạm)
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* NAVBAR */}
+                    <header className="bg-[#cf2c28] text-white sticky top-0 z-40 shadow-md">
+                        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+                            <div
+                                onClick={() => { setActiveTab('market'); setSelectedCategory('Tất cả'); }}
+                                className="flex items-center gap-2 cursor-pointer"
+                            >
+                                <div className="bg-white text-[#cf2c28] px-2 py-0.5 rounded font-black text-xl">Chợ</div>
                                 <span className="font-black text-2xl tracking-tight">BK</span>
                             </div>
-                            
-                            <div className="flex-1 w-full sm:max-w-md relative">
-                                <i data-lucide="search" className="absolute left-3 top-2.5 text-gray-400 w-5 h-5"></i>
-                                <input 
-                                    type="text" 
-                                    placeholder="Tìm kiếm đồ cũ..." 
-                                    className="w-full pl-10 pr-4 py-2 rounded-full text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-300 transition shadow-inner"
+
+                            <div className="flex-1 min-w-[220px] max-w-md relative">
+                                <span className="absolute left-3 top-2.5 text-gray-400">
+                                    <Icon name="search" className="w-4 h-4" />
+                                </span>
+                                <input
+                                    type="text"
+                                    placeholder="Tìm giáo trình, linh kiện, đồ cũ..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full pl-9 pr-4 py-1.5 rounded-full text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-300"
                                 />
                             </div>
 
-                            <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-                                <select 
-                                    className="bg-red-800 text-white text-sm px-3 py-2 rounded cursor-pointer outline-none border border-red-700 hover:bg-red-900 transition"
-                                    onChange={(e) => toggleUser(e.target.value)}
+                            <div className="flex items-center gap-2 sm:gap-3">
+                                <button
+                                    onClick={openCreateModal}
+                                    className="flex items-center gap-1 bg-white text-[#cf2c28] px-3.5 py-1.5 rounded-full font-bold text-xs sm:text-sm hover:bg-gray-100 transition shadow"
                                 >
-                                    <option value="student">👨‍🎓 Quyền: Sinh viên</option>
-                                    <option value="admin">🛡️ Quyền: Quản trị (Admin)</option>
-                                </select>
-                                <button 
-                                    onClick={() => setIsModalOpen(true)}
-                                    className="flex items-center gap-1 bg-white text-[#cf2c28] px-4 py-2 rounded-full font-bold text-sm hover:bg-gray-100 hover:scale-105 transition-transform shadow-md"
-                                >
-                                    <i data-lucide="plus" className="w-4 h-4"></i> Đăng tin
+                                    <Icon name="plus" className="w-4 h-4" /> Đăng tin
                                 </button>
+
+                                <div className="flex items-center gap-2 bg-red-800/80 px-3 py-1.5 rounded-full text-xs">
+                                    <span className={`px-1.5 py-0.5 rounded font-bold ${isAdmin ? 'bg-amber-400 text-amber-950' : 'bg-white/20 text-white'}`}>
+                                        {isAdmin ? 'ADMIN' : 'SV'}
+                                    </span>
+                                    <span className="font-semibold hidden md:inline max-w-[160px] truncate" title={currentUser.email}>
+                                        {currentUser.email}
+                                    </span>
+                                    <button onClick={handleLogout} title="Màn hình đăng nhập" className="ml-1 hover:text-red-200">
+                                        <Icon name="logout" className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* SUB-NAVIGATION TABS */}
+                        <div className="bg-red-800/90 border-t border-red-700/50">
+                            <div className="max-w-7xl mx-auto px-4 flex overflow-x-auto text-xs sm:text-sm font-semibold">
+                                <button
+                                    onClick={() => setActiveTab('market')}
+                                    className={`px-4 py-2.5 border-b-2 whitespace-nowrap transition ${activeTab === 'market' ? 'border-white text-white bg-red-900/40' : 'border-transparent text-red-100 hover:text-white'}`}
+                                >
+                                    Chợ chung ({products.length})
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('my-posts')}
+                                    className={`px-4 py-2.5 border-b-2 whitespace-nowrap transition ${activeTab === 'my-posts' ? 'border-white text-white bg-red-900/40' : 'border-transparent text-red-100 hover:text-white'}`}
+                                >
+                                    Tin của tôi ({products.filter(p => p.sellerEmail === currentUser.email).length})
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('saved')}
+                                    className={`px-4 py-2.5 border-b-2 whitespace-nowrap transition ${activeTab === 'saved' ? 'border-white text-white bg-red-900/40' : 'border-transparent text-red-100 hover:text-white'}`}
+                                >
+                                    Tin đã lưu ({userSavedList.length})
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('messages')}
+                                    className={`px-4 py-2.5 border-b-2 whitespace-nowrap transition ${activeTab === 'messages' ? 'border-white text-white bg-red-900/40' : 'border-transparent text-red-100 hover:text-white'}`}
+                                >
+                                    Hộp thư ({conversations.length})
+                                </button>
+
+                                {isAdmin && (
+                                    <button
+                                        onClick={() => setActiveTab('admin')}
+                                        className={`ml-auto px-4 py-2.5 border-b-2 whitespace-nowrap flex items-center gap-1.5 transition ${activeTab === 'admin' ? 'border-amber-300 text-amber-300 bg-red-950/50' : 'border-transparent text-amber-200 hover:text-amber-100'}`}
+                                    >
+                                        <Icon name="shield" className="w-4 h-4" />
+                                        Quản trị hệ thống
+                                        {reports.length > 0 && (
+                                            <span className="bg-amber-400 text-amber-950 text-[10px] font-black px-1.5 py-0.2 rounded-full">
+                                                {reports.length}
+                                            </span>
+                                        )}
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </header>
 
-                    {/* MAIN CONTENT */}
-                    <main className="max-w-7xl mx-auto px-4 py-6 flex flex-col md:flex-row gap-6 w-full flex-1">
-                        {/* SIDEBAR DANH MỤC */}
-                        <aside className="w-full md:w-64 shrink-0">
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sticky top-24">
-                                <h3 className="font-bold text-lg border-b pb-3 mb-3 flex items-center gap-2 text-gray-800">
-                                    <i data-lucide="tag" className="w-5 h-5 text-[#cf2c28]"></i> Danh mục
-                                </h3>
-                                <ul className="space-y-1">
-                                    {categories.map(cat => (
-                                        <li key={cat}>
-                                            <button 
-                                                onClick={() => setActiveCategory(cat)}
-                                                className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeCategory === cat ? 'bg-red-50 text-[#cf2c28] font-bold border-l-4 border-[#cf2c28]' : 'text-gray-600 hover:bg-gray-50'}`}
+                    {/* NỘI DUNG CHÍNH */}
+                    <main className="max-w-7xl mx-auto px-4 py-6 w-full flex-1">
+                        {activeTab === 'admin' && isAdmin ? (
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                <div className="p-5 border-b bg-amber-50/60 flex flex-wrap justify-between items-center gap-4">
+                                    <div>
+                                        <h1 className="text-xl font-black text-gray-900 flex items-center gap-2">
+                                            <Icon name="shield" className="w-6 h-6 text-[#cf2c28]" /> Bảng điều khiển Quản trị viên
+                                        </h1>
+                                        <p className="text-xs text-gray-500 mt-0.5">Kiểm duyệt khiếu nại, quản lý người dùng và danh mục hệ thống</p>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {[
+                                            { id: 'reports', label: `Khiếu nại (${reports.length})` },
+                                            { id: 'posts', label: `Tất cả bài đăng (${products.length})` },
+                                            { id: 'users', label: `Người dùng (${users.length})` },
+                                            { id: 'categories', label: `Danh mục (${categories.length})` }
+                                        ].map(t => (
+                                            <button
+                                                key={t.id}
+                                                onClick={() => setAdminSubTab(t.id)}
+                                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${adminSubTab === t.id ? 'bg-[#cf2c28] text-white' : 'bg-white border text-gray-700 hover:bg-gray-50'}`}
                                             >
-                                                {cat}
+                                                {t.label}
                                             </button>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        </aside>
-
-                        {/* PRODUCT GRID */}
-                        <div className="flex-1">
-                            <div className="flex justify-between items-end mb-4">
-                                <div>
-                                    <h2 className="text-xl font-bold text-gray-800">Tin đăng mới nhất</h2>
-                                    <p className="text-sm text-gray-500 mt-1">Đang hiển thị {filteredProducts.length} kết quả</p>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                            
-                            {filteredProducts.length === 0 ? (
-                                <div className="bg-white rounded-xl p-10 text-center border border-gray-100 shadow-sm">
-                                    <p className="text-gray-500 font-medium">Không tìm thấy sản phẩm nào phù hợp.</p>
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                                    {filteredProducts.map(product => (
-                                        <div key={product.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-md transition-shadow group">
-                                            <div className="overflow-hidden h-48 relative">
-                                                <img src={product.image} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                                                <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-xs font-bold text-[#cf2c28] shadow">
-                                                    {product.category}
-                                                </div>
-                                            </div>
-                                            <div className="p-4 flex flex-col flex-1">
-                                                <h3 className="font-bold text-gray-800 mb-2 line-clamp-2 min-h-[3rem] leading-tight">{product.title}</h3>
-                                                <div className="text-[#cf2c28] font-black text-lg mb-4">
-                                                    {product.price.toLocaleString('vi-VN')} đ
-                                                </div>
-                                                
-                                                <div className="mt-auto pt-4 border-t border-gray-100 flex flex-col gap-3">
-                                                    <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">
-                                                        <i data-lucide="user" className="w-4 h-4"></i> {product.sellerName}
-                                                    </div>
-                                                    
-                                                    {/* NÚT THAO TÁC (PHÂN QUYỀN) */}
-                                                    <div className="flex gap-2 w-full">
-                                                        {currentUser.email !== product.sellerEmail ? (
-                                                            <button className="flex-1 flex justify-center items-center gap-1 bg-[#cf2c28] text-white px-3 py-2 rounded-lg font-semibold text-sm hover:bg-red-800 transition">
-                                                                <i data-lucide="message-square" className="w-4 h-4"></i> Nhắn tin
-                                                            </button>
-                                                        ) : (
-                                                            <button disabled className="flex-1 bg-gray-100 text-gray-400 px-3 py-2 rounded-lg font-semibold text-sm cursor-not-allowed">
-                                                                Tin của bạn
-                                                            </button>
-                                                        )}
 
-                                                        {/* Quyền Xóa: Chỉ người đăng hoặc Admin (VT02) */}
-                                                        {(currentUser.email === product.sellerEmail || currentUser.role === 'VT02') && (
-                                                            <button 
-                                                                onClick={() => handleDelete(product.id, product.sellerEmail)}
-                                                                className="flex items-center justify-center p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition"
-                                                                title="Xóa bài"
-                                                            >
-                                                                <i data-lucide="trash-2" className="w-4 h-4"></i>
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </div>
+                                <div className="p-5">
+                                    {adminSubTab === 'reports' && (
+                                        reports.length === 0 ? (
+                                            <p className="text-center text-gray-500 py-8 text-sm">Không có khiếu nại nào cần xử lý.</p>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {reports.map(rep => {
+                                                    const targetProd = products.find(p => p.id === rep.productId);
+                                                    return (
+                                                        <div key={rep.id} className="p-4 border border-red-100 bg-red-50/30 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                                            <div>
+                                                                <span className="text-[11px] font-bold bg-red-100 text-red-700 px-2 py-0.5 rounded">Báo cáo vi phạm</span>
+                                                                <h4 className="font-bold text-gray-900 mt-1">{rep.productTitle}</h4>
+                                                                <p className="text-xs text-red-600 font-semibold mt-0.5">Lý do: {rep.reason}</p>
+                                                                <p className="text-[11px] text-gray-500 mt-1">Người báo cáo: {rep.reporterEmail} • {rep.createdAt}</p>
+                                                            </div>
+                                                            <div className="flex gap-2 shrink-0">
+                                                                <button
+                                                                    onClick={() => setReports(reports.filter(r => r.id !== rep.id))}
+                                                                    className="px-3 py-1.5 bg-gray-200 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-300"
+                                                                >
+                                                                    Bỏ qua
+                                                                </button>
+                                                                {targetProd && (
+                                                                    <button
+                                                                        onClick={() => handleDeleteProduct(targetProd)}
+                                                                        className="px-3 py-1.5 bg-[#cf2c28] text-white rounded-lg text-xs font-bold hover:bg-red-800"
+                                                                    >
+                                                                        Xóa bài vi phạm
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
+                                        )
+                                    )}
+
+                                    {adminSubTab === 'posts' && (
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-left text-sm">
+                                                <thead className="bg-gray-50 text-gray-600 text-xs uppercase">
+                                                    <tr>
+                                                        <th className="p-3">Sản phẩm</th>
+                                                        <th className="p-3">Giá</th>
+                                                        <th className="p-3">Người đăng</th>
+                                                        <th className="p-3">Trạng thái</th>
+                                                        <th className="p-3 text-right">Thao tác</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y">
+                                                    {products.map(p => (
+                                                        <tr key={p.id} className="hover:bg-gray-50">
+                                                            <td className="p-3 font-semibold">{p.title}</td>
+                                                            <td className="p-3 text-[#cf2c28] font-bold">{p.price.toLocaleString('vi-VN')} đ</td>
+                                                            <td className="p-3 text-xs text-gray-600">{p.sellerName}<br/>{p.sellerEmail}</td>
+                                                            <td className="p-3">
+                                                                <span className={`text-xs px-2 py-0.5 rounded font-bold ${p.status === 'Đang bán' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>
+                                                                    {p.status}
+                                                                </span>
+                                                            </td>
+                                                            <td className="p-3 text-right">
+                                                                <button
+                                                                    onClick={() => handleDeleteProduct(p)}
+                                                                    className="px-2.5 py-1 bg-red-100 text-red-700 rounded text-xs font-bold hover:bg-red-200"
+                                                                >
+                                                                    Gỡ bài
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
                                         </div>
-                                    ))}
+                                    )}
+
+                                    {adminSubTab === 'users' && (
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-left text-sm">
+                                                <thead className="bg-gray-50 text-gray-600 text-xs uppercase">
+                                                    <tr>
+                                                        <th className="p-3">Tên hiển thị</th>
+                                                        <th className="p-3">Email giả lập</th>
+                                                        <th className="p-3">Vai trò</th>
+                                                        <th className="p-3">Trạng thái</th>
+                                                        <th className="p-3 text-right">Thao tác</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y">
+                                                    {users.map(u => (
+                                                        <tr key={u.email} className="hover:bg-gray-50">
+                                                            <td className="p-3 font-semibold">{u.name}</td>
+                                                            <td className="p-3 text-gray-600">{u.email}</td>
+                                                            <td className="p-3">
+                                                                <span className={`text-xs px-2 py-0.5 rounded font-bold ${u.role === 'VT02' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}`}>
+                                                                    {u.role === 'VT02' ? 'Quản trị viên' : 'Sinh viên'}
+                                                                </span>
+                                                            </td>
+                                                            <td className="p-3">
+                                                                <span className={`text-xs font-bold ${u.banned ? 'text-red-600' : 'text-green-600'}`}>
+                                                                    {u.banned ? 'Đã khóa' : 'Hoạt động'}
+                                                                </span>
+                                                            </td>
+                                                            <td className="p-3 text-right">
+                                                                {u.role !== 'VT02' && (
+                                                                    <button
+                                                                        onClick={() => setUsers(users.map(item => item.email === u.email ? { ...item, banned: !item.banned } : item))}
+                                                                        className={`px-2.5 py-1 rounded text-xs font-bold ${u.banned ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
+                                                                    >
+                                                                        {u.banned ? 'Mở khóa' : 'Khóa tài khoản'}
+                                                                    </button>
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+
+                                    {adminSubTab === 'categories' && (
+                                        <div className="max-w-md">
+                                            <form
+                                                onSubmit={(e) => {
+                                                    e.preventDefault();
+                                                    if (!newCategoryName.trim() || categories.includes(newCategoryName.trim())) return;
+                                                    setCategories([...categories, newCategoryName.trim()]);
+                                                    setNewCategoryName('');
+                                                }}
+                                                className="flex gap-2 mb-4"
+                                            >
+                                                <input
+                                                    type="text"
+                                                    placeholder="Tên danh mục mới..."
+                                                    value={newCategoryName}
+                                                    onChange={(e) => setNewCategoryName(e.target.value)}
+                                                    className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#cf2c28]"
+                                                />
+                                                <button type="submit" className="bg-[#cf2c28] text-white px-4 py-2 rounded-lg text-sm font-bold">
+                                                    Thêm
+                                                </button>
+                                            </form>
+                                            <ul className="divide-y border rounded-lg">
+                                                {categories.map(cat => (
+                                                    <li key={cat} className="p-3 flex justify-between items-center text-sm">
+                                                        <span className="font-medium">{cat}</span>
+                                                        <button
+                                                            onClick={() => setCategories(categories.filter(c => c !== cat))}
+                                                            className="text-red-500 hover:text-red-700 text-xs font-bold"
+                                                        >
+                                                            Xóa
+                                                        </button>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
                                 </div>
-                            )}
-                        </div>
+                            </div>
+                        ) : activeTab === 'messages' ? (
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                                <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+                                    <Icon name="message" className="w-5 h-5 text-[#cf2c28]" /> Tin nhắn trao đổi mua bán
+                                </h2>
+                                {conversations.length === 0 ? (
+                                    <p className="text-center text-gray-500 py-10 text-sm">Chưa có cuộc trò chuyện nào. Hãy bấm "Nhắn tin" trên một sản phẩm để bắt đầu!</p>
+                                ) : (
+                                    <div className="divide-y">
+                                        {conversations.map(conv => (
+                                            <div
+                                                key={conv.key}
+                                                onClick={() => setChatModal({
+                                                    productId: conv.productId,
+                                                    productTitle: conv.productTitle,
+                                                    partnerEmail: conv.partnerEmail,
+                                                    partnerName: conv.partnerName
+                                                })}
+                                                className="p-4 hover:bg-red-50/50 cursor-pointer flex justify-between items-center gap-4 transition rounded-lg"
+                                            >
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-bold text-gray-900 text-sm">{conv.partnerName}</span>
+                                                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{conv.productTitle}</span>
+                                                    </div>
+                                                    <p className="text-xs text-gray-500 mt-1 line-clamp-1">{conv.lastMessage}</p>
+                                                </div>
+                                                <div className="text-right shrink-0">
+                                                    <span className="text-[11px] text-gray-400 block">{conv.lastTime}</span>
+                                                    <span className="text-xs font-bold text-[#cf2c28]">Trả lời →</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col md:flex-row gap-6">
+                                <aside className="w-full md:w-64 shrink-0 space-y-4">
+                                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                                        <h3 className="font-bold text-sm uppercase tracking-wider text-gray-500 mb-3">Danh mục</h3>
+                                        <ul className="space-y-1">
+                                            {['Tất cả', ...categories].map(cat => (
+                                                <li key={cat}>
+                                                    <button
+                                                        onClick={() => setSelectedCategory(cat)}
+                                                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition ${selectedCategory === cat ? 'bg-red-50 text-[#cf2c28] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}
+                                                    >
+                                                        {cat}
+                                                    </button>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+
+                                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                                        <h3 className="font-bold text-sm uppercase tracking-wider text-gray-500 mb-3">Trạng thái</h3>
+                                        <div className="flex flex-wrap gap-2">
+                                            {['Tất cả', 'Đang bán', 'Đã bán'].map(st => (
+                                                <button
+                                                    key={st}
+                                                    onClick={() => setStatusFilter(st)}
+                                                    className={`px-3 py-1 rounded-full text-xs font-semibold border transition ${statusFilter === st ? 'bg-[#cf2c28] text-white border-[#cf2c28]' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                                                >
+                                                    {st}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </aside>
+
+                                <div className="flex-1">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h2 className="text-lg font-bold text-gray-800">
+                                            {activeTab === 'market' && 'Tin đăng mới nhất'}
+                                            {activeTab === 'my-posts' && 'Gian hàng cá nhân của bạn'}
+                                            {activeTab === 'saved' && 'Danh sách tin đã lưu'}
+                                        </h2>
+                                        <span className="text-xs text-gray-500 font-medium">{filteredProducts.length} sản phẩm</span>
+                                    </div>
+
+                                    {filteredProducts.length === 0 ? (
+                                        <div className="bg-white rounded-xl p-12 text-center border border-gray-200">
+                                            <p className="text-gray-500 text-sm mb-3">Không có sản phẩm nào phù hợp.</p>
+                                            {activeTab === 'my-posts' && (
+                                                <button onClick={openCreateModal} className="bg-[#cf2c28] text-white px-4 py-2 rounded-lg text-xs font-bold">
+                                                    + Đăng món đồ đầu tiên
+                                                </button>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                            {filteredProducts.map(product => {
+                                                const isOwner = currentUser.email === product.sellerEmail;
+                                                const isSaved = userSavedList.includes(product.id);
+
+                                                return (
+                                                    <div key={product.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col hover:shadow-md transition">
+                                                        <div onClick={() => setDetailModal(product)} className="relative h-44 bg-gray-100 cursor-pointer overflow-hidden group">
+                                                            <img src={product.image} alt={product.title} className={`w-full h-full object-cover group-hover:scale-105 transition duration-300 ${product.status === 'Đã bán' ? 'opacity-60 grayscale' : ''}`} />
+                                                            <span className="absolute top-2 left-2 bg-white/95 text-[#cf2c28] text-[11px] font-bold px-2 py-0.5 rounded shadow-sm">
+                                                                {product.category}
+                                                            </span>
+                                                            {product.status === 'Đã bán' && (
+                                                                <span className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                                                    <span className="bg-gray-900 text-white font-black text-xs px-3 py-1 rounded-full uppercase tracking-wider">Đã bán</span>
+                                                                </span>
+                                                            )}
+                                                        </div>
+
+                                                        <div className="p-4 flex flex-col flex-1">
+                                                            <h3 onClick={() => setDetailModal(product)} className="font-bold text-gray-800 text-sm line-clamp-2 min-h-[2.5rem] cursor-pointer hover:text-[#cf2c28]">
+                                                                {product.title}
+                                                            </h3>
+                                                            <div className="text-[#cf2c28] font-black text-lg mt-1">
+                                                                {product.price.toLocaleString('vi-VN')} đ
+                                                            </div>
+                                                            <p className="text-[11px] text-gray-500 mt-1">Tình trạng: {product.condition}</p>
+
+                                                            <div className="mt-auto pt-3 border-t border-gray-100">
+                                                                <div className="flex items-center justify-between text-[11px] text-gray-500 mb-3">
+                                                                    <span className="truncate font-medium">
+                                                                        {isOwner ? '👤 Bài đăng của bạn' : `👤 ${product.sellerName}`}
+                                                                    </span>
+                                                                    <span>{product.createdAt}</span>
+                                                                </div>
+
+                                                                <div className="flex items-center gap-1.5">
+                                                                    {isOwner ? (
+                                                                        <>
+                                                                            <button
+                                                                                onClick={() => toggleSoldStatus(product)}
+                                                                                className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold border transition ${product.status === 'Đang bán' ? 'border-green-600 text-green-700 hover:bg-green-50' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}
+                                                                            >
+                                                                                {product.status === 'Đang bán' ? '✓ Đã bán' : 'Mở bán lại'}
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={() => openEditModal(product)}
+                                                                                className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100"
+                                                                                title="Sửa tin"
+                                                                            >
+                                                                                <Icon name="edit" />
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={() => handleDeleteProduct(product)}
+                                                                                className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100"
+                                                                                title="Xóa tin"
+                                                                            >
+                                                                                <Icon name="trash" />
+                                                                            </button>
+                                                                        </>
+                                                                    ) : (
+                                                                        <>
+                                                                            <button
+                                                                                onClick={() => openChatWithSeller(product)}
+                                                                                className="flex-1 flex items-center justify-center gap-1 bg-[#cf2c28] text-white py-1.5 px-2 rounded-lg text-xs font-bold hover:bg-red-800 transition"
+                                                                            >
+                                                                                <Icon name="message" className="w-3.5 h-3.5" /> Nhắn tin
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={() => toggleSavePost(product.id)}
+                                                                                className={`p-1.5 rounded-lg border transition ${isSaved ? 'bg-red-50 border-red-200 text-[#cf2c28]' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}
+                                                                                title={isSaved ? 'Bỏ lưu' : 'Lưu tin'}
+                                                                            >
+                                                                                <Icon name="heart" className="w-4 h-4" />
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={() => setReportModal(product)}
+                                                                                className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:text-amber-600 hover:bg-amber-50"
+                                                                                title="Khiếu nại bài đăng"
+                                                                            >
+                                                                                <Icon name="flag" className="w-4 h-4" />
+                                                                            </button>
+                                                                            {isAdmin && (
+                                                                                <button
+                                                                                    onClick={() => handleDeleteProduct(product)}
+                                                                                    className="p-1.5 bg-amber-100 text-amber-800 rounded-lg hover:bg-amber-200"
+                                                                                    title="Admin gỡ bài"
+                                                                                >
+                                                                                    <Icon name="trash" className="w-4 h-4" />
+                                                                                </button>
+                                                                            )}
+                                                                        </>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </main>
 
-                    {/* MODAL ĐĂNG TIN */}
-                    {isModalOpen && (
-                        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-                            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+                    {/* FOOTER */}
+                    <footer className="bg-white border-t py-4 px-4 mt-10 text-xs text-gray-500">
+                        <div className="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-2">
+                            <span>© 2026 Chợ BK - Nền tảng trao đổi đồ cũ sinh viên.</span>
+                            <button onClick={resetDemoData} className="text-gray-400 hover:text-[#cf2c28] underline">
+                                Khôi phục dữ liệu mẫu
+                            </button>
+                        </div>
+                    </footer>
+
+                    {/* === MODAL ĐĂNG TIN / SỬA TIN === */}
+                    {productModal.open && (
+                        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
                                 <div className="bg-[#cf2c28] p-4 text-white flex justify-between items-center">
-                                    <h2 className="text-lg font-bold flex items-center gap-2">
-                                        <i data-lucide="plus" className="w-5 h-5"></i> Đăng tin mới
-                                    </h2>
-                                    <button onClick={() => setIsModalOpen(false)} className="hover:bg-red-700 p-1 rounded-full transition">
-                                        ✕
-                                    </button>
+                                    <h3 className="font-bold text-base">
+                                        {productModal.mode === 'create' ? 'Đăng bán sản phẩm mới' : 'Chỉnh sửa bài đăng'}
+                                    </h3>
+                                    <button onClick={() => setProductModal({ open: false, mode: 'create', data: null })}><Icon name="x" /></button>
                                 </div>
-                                <form onSubmit={handleSubmit} className="p-5 space-y-4">
+                                <form onSubmit={handleSaveProduct} className="p-5 space-y-3 overflow-y-auto text-sm">
                                     <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-1">Tiêu đề sản phẩm <span className="text-red-500">*</span></label>
-                                        <input 
+                                        <label className="block font-bold text-gray-700 mb-1">Tiêu đề sản phẩm *</label>
+                                        <input
                                             type="text" required
-                                            value={formData.title}
-                                            onChange={(e) => setFormData({...formData, title: e.target.value})}
-                                            className="w-full border border-gray-300 rounded-lg p-2.5 focus:outline-none focus:border-[#cf2c28] focus:ring-1 focus:ring-[#cf2c28]"
-                                            placeholder="Vd: Sách mạch điện tử..."
+                                            value={productModal.data.title}
+                                            onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, title: e.target.value } })}
+                                            placeholder="Vd: Giáo trình Điện tử số, Kit Arduino..."
+                                            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:border-[#cf2c28]"
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block font-bold text-gray-700 mb-1">Giá bán (VNĐ) *</label>
+                                            <input
+                                                type="number" required min="0" step="1000"
+                                                value={productModal.data.price}
+                                                onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, price: e.target.value } })}
+                                                placeholder="50000"
+                                                className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:border-[#cf2c28]"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block font-bold text-gray-700 mb-1">Danh mục</label>
+                                            <select
+                                                value={productModal.data.category}
+                                                onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, category: e.target.value } })}
+                                                className="w-full border rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-[#cf2c28]"
+                                            >
+                                                {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block font-bold text-gray-700 mb-1">Tình trạng món đồ</label>
+                                        <input
+                                            type="text"
+                                            value={productModal.data.condition}
+                                            onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, condition: e.target.value } })}
+                                            placeholder="Vd: Mới 95%, ít sử dụng"
+                                            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:border-[#cf2c28]"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-1">Mức giá (VNĐ) <span className="text-red-500">*</span></label>
-                                        <input 
-                                            type="number" required min="0" step="1000"
-                                            value={formData.price}
-                                            onChange={(e) => setFormData({...formData, price: e.target.value})}
-                                            className="w-full border border-gray-300 rounded-lg p-2.5 focus:outline-none focus:border-[#cf2c28] focus:ring-1 focus:ring-[#cf2c28]"
-                                            placeholder="Vd: 50000"
+                                        <label className="block font-bold text-gray-700 mb-1">Ảnh sản phẩm (Tải từ máy hoặc dán link)</label>
+                                        <input type="file" accept="image/*" onChange={handleImageUpload} className="text-xs mb-2 block" />
+                                        <input
+                                            type="text"
+                                            value={productModal.data.image}
+                                            onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, image: e.target.value } })}
+                                            placeholder="Hoặc dán đường dẫn ảnh (tùy chọn)..."
+                                            className="w-full border rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#cf2c28]"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-1">Danh mục</label>
-                                        <select 
-                                            value={formData.category}
-                                            onChange={(e) => setFormData({...formData, category: e.target.value})}
-                                            className="w-full border border-gray-300 rounded-lg p-2.5 focus:outline-none focus:border-[#cf2c28] focus:ring-1 focus:ring-[#cf2c28] bg-white"
-                                        >
-                                            {categories.filter(c => c !== 'Tất cả').map(cat => (
-                                                <option key={cat} value={cat}>{cat}</option>
-                                            ))}
-                                        </select>
+                                        <label className="block font-bold text-gray-700 mb-1">Mô tả chi tiết & Địa điểm giao dịch</label>
+                                        <textarea
+                                            rows="3"
+                                            value={productModal.data.description}
+                                            onChange={(e) => setProductModal({ ...productModal, data: { ...productModal.data, description: e.target.value } })}
+                                            placeholder="Mô tả chi tiết tình trạng, khu vực giao dịch tại trường..."
+                                            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:border-[#cf2c28]"
+                                        ></textarea>
                                     </div>
-                                    <div className="pt-2 flex gap-3">
-                                        <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-2.5 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition">
+                                    <div className="pt-2 flex gap-2">
+                                        <button type="button" onClick={() => setProductModal({ open: false, mode: 'create', data: null })} className="flex-1 py-2 border rounded-lg font-bold text-gray-600">
                                             Hủy
                                         </button>
-                                        <button type="submit" className="flex-1 py-2.5 bg-[#cf2c28] text-white font-bold rounded-lg hover:bg-red-800 transition shadow-md shadow-red-200">
-                                            Đăng bán ngay
+                                        <button type="submit" className="flex-1 py-2 bg-[#cf2c28] text-white rounded-lg font-bold hover:bg-red-800">
+                                            {productModal.mode === 'create' ? 'Đăng tin ngay' : 'Lưu thay đổi'}
                                         </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* === MODAL CHI TIẾT SẢN PHẨM === */}
+                    {detailModal && (
+                        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+                                <div className="relative h-64 bg-gray-100">
+                                    <img src={detailModal.image} alt={detailModal.title} className="w-full h-full object-cover" />
+                                    <button onClick={() => setDetailModal(null)} className="absolute top-3 right-3 bg-black/60 text-white p-1.5 rounded-full hover:bg-black">
+                                        <Icon name="x" />
+                                    </button>
+                                </div>
+                                <div className="p-6 overflow-y-auto">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className="bg-red-50 text-[#cf2c28] text-xs font-bold px-2.5 py-0.5 rounded">{detailModal.category}</span>
+                                        <span className={`text-xs font-bold px-2.5 py-0.5 rounded ${detailModal.status === 'Đang bán' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-700'}`}>
+                                            {detailModal.status}
+                                        </span>
+                                    </div>
+                                    <h2 className="text-xl font-black text-gray-900">{detailModal.title}</h2>
+                                    <div className="text-2xl font-black text-[#cf2c28] my-2">{detailModal.price.toLocaleString('vi-VN')} đ</div>
+                                    <p className="text-xs text-gray-500 mb-4">Người bán: <b>{detailModal.sellerName}</b> ({detailModal.sellerEmail}) • Ngày đăng: {detailModal.createdAt}</p>
+                                    <div className="bg-gray-50 p-4 rounded-xl text-sm text-gray-700 space-y-2 mb-5">
+                                        <p><b>Tình trạng:</b> {detailModal.condition}</p>
+                                        <p><b>Mô tả chi tiết:</b> {detailModal.description}</p>
+                                    </div>
+                                    {currentUser.email !== detailModal.sellerEmail && (
+                                        <button
+                                            onClick={() => { const p = detailModal; setDetailModal(null); openChatWithSeller(p); }}
+                                            className="w-full bg-[#cf2c28] text-white py-2.5 rounded-xl font-bold text-sm hover:bg-red-800 flex items-center justify-center gap-2"
+                                        >
+                                            <Icon name="message" /> Nhắn tin trao đổi với người bán
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* === MODAL KHUNG CHAT TRỰC TIẾP === */}
+                    {chatModal && (
+                        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col h-[500px]">
+                                <div className="bg-[#cf2c28] p-4 text-white flex justify-between items-center">
+                                    <div>
+                                        <h4 className="font-bold text-sm">{chatModal.partnerName}</h4>
+                                        <p className="text-[11px] text-red-100 truncate max-w-[260px]">SP: {chatModal.productTitle}</p>
+                                    </div>
+                                    <button onClick={() => setChatModal(null)}><Icon name="x" /></button>
+                                </div>
+                                <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-gray-50">
+                                    {messages
+                                        .filter(m => m.productId === chatModal.productId && (
+                                            (m.senderEmail === currentUser.email && m.receiverEmail === chatModal.partnerEmail) ||
+                                            (m.senderEmail === chatModal.partnerEmail && m.receiverEmail === currentUser.email)
+                                        ))
+                                        .map(m => {
+                                            const isMe = m.senderEmail === currentUser.email;
+                                            return (
+                                                <div key={m.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                                                    <div className={`px-3.5 py-2 rounded-2xl text-xs max-w-[80%] ${isMe ? 'bg-[#cf2c28] text-white rounded-br-none' : 'bg-white border text-gray-800 rounded-bl-none'}`}>
+                                                        {m.text}
+                                                    </div>
+                                                    <span className="text-[10px] text-gray-400 mt-1">{m.time}</span>
+                                                </div>
+                                            );
+                                        })}
+                                </div>
+                                <form onSubmit={handleSendMessage} className="p-3 bg-white border-t flex gap-2">
+                                    <input
+                                        type="text"
+                                        placeholder="Nhập tin nhắn hỏi mua hàng..."
+                                        value={chatInput}
+                                        onChange={(e) => setChatInput(e.target.value)}
+                                        className="flex-1 border rounded-full px-4 py-2 text-xs focus:outline-none focus:border-[#cf2c28]"
+                                    />
+                                    <button type="submit" className="bg-[#cf2c28] text-white p-2 rounded-full hover:bg-red-800">
+                                        <Icon name="send" />
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* === MODAL KHIẾU NẠI BÀI ĐĂNG === */}
+                    {reportModal && (
+                        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
+                                <div className="bg-amber-600 p-4 text-white flex justify-between items-center">
+                                    <h4 className="font-bold text-sm flex items-center gap-1.5"><Icon name="alert" /> Khiếu nại bài đăng</h4>
+                                    <button onClick={() => setReportModal(null)}><Icon name="x" /></button>
+                                </div>
+                                <form onSubmit={handleSubmitReport} className="p-4 space-y-3 text-sm">
+                                    <p className="text-xs text-gray-600">Sản phẩm: <b>{reportModal.title}</b></p>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-700 mb-1">Chọn lý do vi phạm:</label>
+                                        <select
+                                            value={reportReason}
+                                            onChange={(e) => setReportReason(e.target.value)}
+                                            className="w-full border rounded-lg p-2 text-xs bg-white"
+                                        >
+                                            <option>Sản phẩm cấm / Vi phạm quy định</option>
+                                            <option>Thông tin sai sự thật / Lừa đảo</option>
+                                            <option>Trùng lặp / Spam tin đăng</option>
+                                            <option>Hàng đã bán nhưng không cập nhật</option>
+                                        </select>
+                                    </div>
+                                    <div className="flex gap-2 pt-2">
+                                        <button type="button" onClick={() => setReportModal(null)} className="flex-1 py-2 border rounded-lg text-xs font-bold">Hủy</button>
+                                        <button type="submit" className="flex-1 py-2 bg-amber-600 text-white rounded-lg text-xs font-bold hover:bg-amber-700">Gửi báo cáo</button>
                                     </div>
                                 </form>
                             </div>
@@ -286,14 +1321,8 @@
             );
         };
 
-        // Render React App & Initialize Lucide Icons
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
-        
-        // Timeout nhỏ để icon load kịp sau khi React render
-        setTimeout(() => {
-            lucide.createIcons();
-        }, 100);
     </script>
 </body>
 </html>
