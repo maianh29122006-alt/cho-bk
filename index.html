@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chợ BK - Sàn giao dịch sinh viên</title>
+    <!-- Thư viện giao diện và logic -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Tùy chỉnh thanh cuộn */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cf2c28; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans text-gray-900">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { Search, Plus, Trash2, MessageSquare, User, Tag, ShieldAlert } = lucide;
+
+        const App = () => {
+            // 1. STATE QUẢN LÝ NGƯỜI DÙNG (Giả lập phân quyền)
+            const [currentUser, setCurrentUser] = useState({ 
+                email: 'sinhvien@hust.edu.vn', 
+                role: 'VT01', 
+                name: 'Sinh viên' 
+            });
+
+            // 2. STATE DỮ LIỆU SẢN PHẨM (Có chứa các thông tin chuyên ngành Điện tử - Viễn thông)
+            const [products, setProducts] = useState([
+                { id: 1, title: 'Giáo trình Giải tích 1 & Vật lý điện tử', price: 60000, category: 'Giáo trình đại cương', sellerEmail: 'nguyenvanb@hust.edu.vn', sellerName: 'Nguyễn Văn B', image: 'https://placehold.co/400x300/cf2c28/ffffff?text=Giao+Trinh' },
+                { id: 2, title: 'Bộ kit thực hành mạch (1 điện trở cố định, 1 biến trở)', price: 45000, category: 'Linh kiện điện tử', sellerEmail: 'sinhvien@hust.edu.vn', sellerName: 'Sinh viên (Bạn)', image: 'https://placehold.co/400x300/cf2c28/ffffff?text=Mach+Dien' },
+                { id: 3, title: 'Board mạch Arduino Uno R3 cũ', price: 90000, category: 'Linh kiện điện tử', sellerEmail: 'tranthic@hust.edu.vn', sellerName: 'Trần Thị C', image: 'https://placehold.co/400x300/cf2c28/ffffff?text=Arduino' },
+                { id: 4, title: 'Cáp quang bấm sẵn đầu chuẩn SC/UPC', price: 30000, category: 'Thiết bị viễn thông', sellerEmail: 'admin@hust.edu.vn', sellerName: 'Admin Chợ BK', image: 'https://placehold.co/400x300/cf2c28/ffffff?text=Cap+Quang' }
+            ]);
+
+            // 3. STATE LỌC & TÌM KIẾM
+            const [activeCategory, setActiveCategory] = useState('Tất cả');
+            const [searchQuery, setSearchQuery] = useState('');
+            const categories = ['Tất cả', 'Giáo trình đại cương', 'Linh kiện điện tử', 'Thiết bị viễn thông', 'Đồ dùng cá nhân'];
+
+            // 4. STATE FORM ĐĂNG TIN
+            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [formData, setFormData] = useState({ title: '', price: '', category: 'Giáo trình đại cương' });
+
+            // LOGIC HỆ THỐNG
+            // Chuyển đổi vai trò để test
+            const toggleUser = (roleType) => {
+                if (roleType === 'admin') {
+                    setCurrentUser({ email: 'admin@hust.edu.vn', role: 'VT02', name: 'Quản trị viên' });
+                } else {
+                    setCurrentUser({ email: 'sinhvien@hust.edu.vn', role: 'VT01', name: 'Sinh viên (Bạn)' });
+                }
+            };
+
+            // Hàm xóa bài viết (Kiểm tra quyền)
+            const handleDelete = (id, sellerEmail) => {
+                if (currentUser.role === 'VT02' || currentUser.email === sellerEmail) {
+                    if (confirm('Bạn có chắc chắn muốn xóa bài đăng này? Hành động này không thể hoàn tác.')) {
+                        setProducts(products.filter(p => p.id !== id));
+                    }
+                } else {
+                    alert('Lỗi bảo mật: Bạn không có quyền xóa bài đăng của người khác!');
+                }
+            };
+
+            // Hàm xử lý đăng tin mới
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (!formData.title || !formData.price) return;
+                
+                const newProduct = {
+                    id: Date.now(),
+                    title: formData.title,
+                    price: parseInt(formData.price),
+                    category: formData.category,
+                    sellerEmail: currentUser.email,
+                    sellerName: currentUser.name,
+                    image: `https://placehold.co/400x300/cf2c28/ffffff?text=Cho+BK`
+                };
+                setProducts([newProduct, ...products]);
+                setIsModalOpen(false);
+                setFormData({ title: '', price: '', category: 'Giáo trình đại cương' });
+            };
+
+            // Hàm lọc sản phẩm để hiển thị
+            const filteredProducts = products.filter(p => {
+                const matchCategory = activeCategory === 'Tất cả' || p.category === activeCategory;
+                const matchSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase());
+                return matchCategory && matchSearch;
+            });
+
+            return (
+                <div className="min-h-screen flex flex-col">
+                    {/* HEADER */}
+                    <header className="bg-[#cf2c28] text-white sticky top-0 z-40 shadow-lg">
+                        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row justify-between items-center gap-3">
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
+                                {/* Đã xóa hidden sm:block để chữ BK luôn hiển thị */}
+                                <div className="bg-white text-[#cf2c28] px-2 py-1 rounded font-black text-2xl leading-none shadow-sm">Chợ</div>
+                                <span className="font-black text-2xl tracking-tight">BK</span>
+                            </div>
+                            
+                            <div className="flex-1 w-full sm:max-w-md relative">
+                                <i data-lucide="search" className="absolute left-3 top-2.5 text-gray-400 w-5 h-5"></i>
+                                <input 
+                                    type="text" 
+                                    placeholder="Tìm kiếm đồ cũ..." 
+                                    className="w-full pl-10 pr-4 py-2 rounded-full text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-300 transition shadow-inner"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
+
+                            <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                                <select 
+                                    className="bg-red-800 text-white text-sm px-3 py-2 rounded cursor-pointer outline-none border border-red-700 hover:bg-red-900 transition"
+                                    onChange={(e) => toggleUser(e.target.value)}
+                                >
+                                    <option value="student">👨‍🎓 Quyền: Sinh viên</option>
+                                    <option value="admin">🛡️ Quyền: Quản trị (Admin)</option>
+                                </select>
+                                <button 
+                                    onClick={() => setIsModalOpen(true)}
+                                    className="flex items-center gap-1 bg-white text-[#cf2c28] px-4 py-2 rounded-full font-bold text-sm hover:bg-gray-100 hover:scale-105 transition-transform shadow-md"
+                                >
+                                    <i data-lucide="plus" className="w-4 h-4"></i> Đăng tin
+                                </button>
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* MAIN CONTENT */}
+                    <main className="max-w-7xl mx-auto px-4 py-6 flex flex-col md:flex-row gap-6 w-full flex-1">
+                        {/* SIDEBAR DANH MỤC */}
+                        <aside className="w-full md:w-64 shrink-0">
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sticky top-24">
+                                <h3 className="font-bold text-lg border-b pb-3 mb-3 flex items-center gap-2 text-gray-800">
+                                    <i data-lucide="tag" className="w-5 h-5 text-[#cf2c28]"></i> Danh mục
+                                </h3>
+                                <ul className="space-y-1">
+                                    {categories.map(cat => (
+                                        <li key={cat}>
+                                            <button 
+                                                onClick={() => setActiveCategory(cat)}
+                                                className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeCategory === cat ? 'bg-red-50 text-[#cf2c28] font-bold border-l-4 border-[#cf2c28]' : 'text-gray-600 hover:bg-gray-50'}`}
+                                            >
+                                                {cat}
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </aside>
+
+                        {/* PRODUCT GRID */}
+                        <div className="flex-1">
+                            <div className="flex justify-between items-end mb-4">
+                                <div>
+                                    <h2 className="text-xl font-bold text-gray-800">Tin đăng mới nhất</h2>
+                                    <p className="text-sm text-gray-500 mt-1">Đang hiển thị {filteredProducts.length} kết quả</p>
+                                </div>
+                            </div>
+                            
+                            {filteredProducts.length === 0 ? (
+                                <div className="bg-white rounded-xl p-10 text-center border border-gray-100 shadow-sm">
+                                    <p className="text-gray-500 font-medium">Không tìm thấy sản phẩm nào phù hợp.</p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                                    {filteredProducts.map(product => (
+                                        <div key={product.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-md transition-shadow group">
+                                            <div className="overflow-hidden h-48 relative">
+                                                <img src={product.image} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                                <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-xs font-bold text-[#cf2c28] shadow">
+                                                    {product.category}
+                                                </div>
+                                            </div>
+                                            <div className="p-4 flex flex-col flex-1">
+                                                <h3 className="font-bold text-gray-800 mb-2 line-clamp-2 min-h-[3rem] leading-tight">{product.title}</h3>
+                                                <div className="text-[#cf2c28] font-black text-lg mb-4">
+                                                    {product.price.toLocaleString('vi-VN')} đ
+                                                </div>
+                                                
+                                                <div className="mt-auto pt-4 border-t border-gray-100 flex flex-col gap-3">
+                                                    <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">
+                                                        <i data-lucide="user" className="w-4 h-4"></i> {product.sellerName}
+                                                    </div>
+                                                    
+                                                    {/* NÚT THAO TÁC (PHÂN QUYỀN) */}
+                                                    <div className="flex gap-2 w-full">
+                                                        {currentUser.email !== product.sellerEmail ? (
+                                                            <button className="flex-1 flex justify-center items-center gap-1 bg-[#cf2c28] text-white px-3 py-2 rounded-lg font-semibold text-sm hover:bg-red-800 transition">
+                                                                <i data-lucide="message-square" className="w-4 h-4"></i> Nhắn tin
+                                                            </button>
+                                                        ) : (
+                                                            <button disabled className="flex-1 bg-gray-100 text-gray-400 px-3 py-2 rounded-lg font-semibold text-sm cursor-not-allowed">
+                                                                Tin của bạn
+                                                            </button>
+                                                        )}
+
+                                                        {/* Quyền Xóa: Chỉ người đăng hoặc Admin (VT02) */}
+                                                        {(currentUser.email === product.sellerEmail || currentUser.role === 'VT02') && (
+                                                            <button 
+                                                                onClick={() => handleDelete(product.id, product.sellerEmail)}
+                                                                className="flex items-center justify-center p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition"
+                                                                title="Xóa bài"
+                                                            >
+                                                                <i data-lucide="trash-2" className="w-4 h-4"></i>
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </main>
+
+                    {/* MODAL ĐĂNG TIN */}
+                    {isModalOpen && (
+                        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+                                <div className="bg-[#cf2c28] p-4 text-white flex justify-between items-center">
+                                    <h2 className="text-lg font-bold flex items-center gap-2">
+                                        <i data-lucide="plus" className="w-5 h-5"></i> Đăng tin mới
+                                    </h2>
+                                    <button onClick={() => setIsModalOpen(false)} className="hover:bg-red-700 p-1 rounded-full transition">
+                                        ✕
+                                    </button>
+                                </div>
+                                <form onSubmit={handleSubmit} className="p-5 space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-1">Tiêu đề sản phẩm <span className="text-red-500">*</span></label>
+                                        <input 
+                                            type="text" required
+                                            value={formData.title}
+                                            onChange={(e) => setFormData({...formData, title: e.target.value})}
+                                            className="w-full border border-gray-300 rounded-lg p-2.5 focus:outline-none focus:border-[#cf2c28] focus:ring-1 focus:ring-[#cf2c28]"
+                                            placeholder="Vd: Sách mạch điện tử..."
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-1">Mức giá (VNĐ) <span className="text-red-500">*</span></label>
+                                        <input 
+                                            type="number" required min="0" step="1000"
+                                            value={formData.price}
+                                            onChange={(e) => setFormData({...formData, price: e.target.value})}
+                                            className="w-full border border-gray-300 rounded-lg p-2.5 focus:outline-none focus:border-[#cf2c28] focus:ring-1 focus:ring-[#cf2c28]"
+                                            placeholder="Vd: 50000"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-1">Danh mục</label>
+                                        <select 
+                                            value={formData.category}
+                                            onChange={(e) => setFormData({...formData, category: e.target.value})}
+                                            className="w-full border border-gray-300 rounded-lg p-2.5 focus:outline-none focus:border-[#cf2c28] focus:ring-1 focus:ring-[#cf2c28] bg-white"
+                                        >
+                                            {categories.filter(c => c !== 'Tất cả').map(cat => (
+                                                <option key={cat} value={cat}>{cat}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="pt-2 flex gap-3">
+                                        <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-2.5 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition">
+                                            Hủy
+                                        </button>
+                                        <button type="submit" className="flex-1 py-2.5 bg-[#cf2c28] text-white font-bold rounded-lg hover:bg-red-800 transition shadow-md shadow-red-200">
+                                            Đăng bán ngay
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // Render React App & Initialize Lucide Icons
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+        
+        // Timeout nhỏ để icon load kịp sau khi React render
+        setTimeout(() => {
+            lucide.createIcons();
+        }, 100);
+    </script>
+</body>
+</html>
